@@ -27,11 +27,8 @@ public class ImageService {
         // Tạo blob từ file và lưu vào bucket
         Blob blob = bucket.create(fileName, file.getBytes(), file.getContentType());
 
-        // Tạo URL truy cập tệp đã tải lên
-        String imageUrl = String.format("https://firebasestorage.googleapis.com/v0/b/%s/o/%s?alt=media", bucket.getName(), fileName.replace("/", "%2F"));
-
         // Trả về URL của file đã tải lên
-        return imageUrl;
+        return String.format("https://firebasestorage.googleapis.com/v0/b/%s/o/%s?alt=media", bucket.getName(), fileName.replace("/", "%2F"));
     }
 
     private String generateFileName(String originalFileName) {

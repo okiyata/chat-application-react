@@ -25,9 +25,7 @@ public class ChatController {
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageService chatMessageService;
-
-    @Autowired
-    private ImageService imageService;
+    private final ImageService imageService;
 
     @PostMapping("/chat/upload")
     public ResponseEntity<String> handleImageMessage(
