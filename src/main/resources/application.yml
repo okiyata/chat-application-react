@@ -1,0 +1,22 @@
+#spring:
+#  data:
+#    mongodb:
+#      username: alibou
+#      password: alibou
+#      host: localhost
+#      port: 27017
+#      database: chat_app
+#      authentication-database: admin
+spring:
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=Chat;encrypt=true;trustServerCertificate=true
+    username: sa
+    password: 12345
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    database-platform: org.hibernate.dialect.SQLServerDialect
+    hibernate:
+      ddl-auto: update
+server:
+  port: 8083
+
