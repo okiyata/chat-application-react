@@ -29,7 +29,7 @@ public class UserService {
 
     public void syncUsersToFirestore() {
         Firestore db = FirestoreClient.getFirestore();
-        CollectionReference usersCollection = db.collection("users");
+        CollectionReference usersCollection = db.collection(USER_COLLECTION_NAME);
         List<Account> accounts = accountRepository.findAll(); // Lấy tất cả các tài khoản từ SQL
 
         for (Account account : accounts) {
