@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext  } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
@@ -27,7 +27,7 @@ const ChatComponent = () => {
         usernameFormRef.current.addEventListener('submit', connect);
         messageFormRef.current.addEventListener('submit', sendMessage);
         window.onbeforeunload = () => onLogout();
-        roleSelectListRef.current.addEventListener('change', onRoleChange);
+        roleSelectRef.current.addEventListener('change', onRoleChange);
 
         return () => {
             // componentWillUnmount equivalent
@@ -162,24 +162,24 @@ const ChatComponent = () => {
     }
 
     async function findAndDisplayConnectedUsers() {
-        try {
-            console.log("currentUser: ", currentUser);
-
-            if (currentUser.role === "CUSTOMER") {
-                roleSelectListRef.current.classList.add('hidden');
-                if (userSaleStaff !== "") {
-                    const allUsersResponse = await fetch(`http://localhost:8083/user/check/${userSaleStaff}`);
-                    const user = await allUsersResponse.json();
-                    await renderConnectedUsers([user]);
+        if(currentUser) {
+            try {
+                if (currentUser.role === "CUSTOMER") {
+                    roleSelectListRef.current.classList.add('hidden');
+                    if (userSaleStaff !== "") {
+                        const allUsersResponse = await fetch(`http://localhost:8083/user/check/${userSaleStaff}`);
+                        const user = await allUsersResponse.json();
+                        await renderConnectedUsers([user]);
+                    }
+                } else {
+                    roleSelectListRef.current.classList.remove('hidden');
+                    const allUsersResponse = await fetch(`http://localhost:8083/users/${roleSelectRef.current.value}`);
+                    const users = await allUsersResponse.json();
+                    await renderConnectedUsers(users.filter(user => user.id !== userId));
                 }
-            } else {
-                roleSelectListRef.current.classList.remove('hidden');
-                const allUsersResponse = await fetch(`http://localhost:8083/users/${roleSelectRef.current.value}`);
-                const users = await allUsersResponse.json();
-                await renderConnectedUsers(users.filter(user => user.id !== userId));
+            } catch (error) {
+                console.error('Error fetching and displaying connected users:', error);
             }
-        } catch (error) {
-            console.error('Error fetching and displaying connected users:', error);
         }
     }
 
