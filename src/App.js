@@ -9,6 +9,8 @@ const ChatComponent = () => {
     const [userSaleStaff, setUserSaleStaff] = useState(null);
     const [selectedUserId, setSelectedUserId] = useState(null);
 
+    const selectedUserIdRef = useRef(null);
+
     const usernamePageRef = useRef(null);
     const chatPageRef = useRef(null);
     const usernameFormRef = useRef(null);
@@ -17,7 +19,6 @@ const ChatComponent = () => {
     const imageInputRef = useRef(null);
     const connectingElementRef = useRef(null);
     const chatAreaRef = useRef(null);
-    const logoutRef = useRef(null);
     const roleSelectListRef = useRef(null);
     const roleSelectRef = useRef(null);
 
@@ -26,20 +27,41 @@ const ChatComponent = () => {
         usernameFormRef.current.addEventListener('submit', connect);
         messageFormRef.current.addEventListener('submit', sendMessage);
         window.onbeforeunload = () => onLogout();
-        imageInputRef.current.addEventListener('change', handleImageUpload);
-        roleSelectRef.current.addEventListener('change', onRoleChange);
+        roleSelectListRef.current.addEventListener('change', onRoleChange);
 
         return () => {
             // componentWillUnmount equivalent
             if (stompClient) {
                 stompClient.publish({
                     destination: "/app/user.disconnectUser",
-                    body: JSON.stringify({ id: userId, status: 'OFFLINE' }),
+                    body: JSON.stringify({ id: userId }),
                 });
                 stompClient.deactivate();
             }
         };
     }, [stompClient, userId]);
+
+    useEffect(() => {
+        if (stompClient) {
+            stompClient.onConnect = onConnected;
+            stompClient.onStompError = onError;
+            stompClient.activate();
+        }
+    }, [stompClient]);
+
+    useEffect(() => {
+        imageInputRef.current.addEventListener('change', handleImageUpload);
+        return () => {
+            imageInputRef.current.removeEventListener('change', handleImageUpload);
+        };
+    }, [userId, selectedUserId]);
+
+    useEffect(() => {
+        selectedUserIdRef.current = selectedUserId;
+        if (selectedUserId !== null) {
+            fetchAndDisplayUserChat().then();
+        }
+    }, [selectedUserId]);
 
     async function connect(event) {
         event.preventDefault();
@@ -111,7 +133,7 @@ const ChatComponent = () => {
 
     async function fetchUnreadMessages() {
         try {
-            const unreadMessagesResponse = await fetch(`/unread-messages/${userId}`);
+            const unreadMessagesResponse = await fetch(`http://localhost:8083/unread-messages/${userId}`);
             if (unreadMessagesResponse.ok) {
                 const unreadMessagesText = await unreadMessagesResponse.text();
                 if (unreadMessagesText.trim().length > 0) {
@@ -139,18 +161,20 @@ const ChatComponent = () => {
         }
     }
 
-    async function findAndDisplayConnectedUsers(selectedRole = null) {
+    async function findAndDisplayConnectedUsers() {
         try {
+            console.log("currentUser: ", currentUser);
+
             if (currentUser.role === "CUSTOMER") {
                 roleSelectListRef.current.classList.add('hidden');
                 if (userSaleStaff !== "") {
-                    const allUsersResponse = await fetch(`/user/check/${userSaleStaff}`);
+                    const allUsersResponse = await fetch(`http://localhost:8083/user/check/${userSaleStaff}`);
                     const user = await allUsersResponse.json();
                     await renderConnectedUsers([user]);
                 }
             } else {
                 roleSelectListRef.current.classList.remove('hidden');
-                const allUsersResponse = await fetch(`/users/${roleSelectRef.current.value}`);
+                const allUsersResponse = await fetch(`http://localhost:8083/users/${roleSelectRef.current.value}`);
                 const users = await allUsersResponse.json();
                 await renderConnectedUsers(users.filter(user => user.id !== userId));
             }
@@ -181,7 +205,7 @@ const ChatComponent = () => {
         listItem.id = user.id;
 
         const userImage = document.createElement('img');
-        userImage.src = '../img/user_icon.png';
+        userImage.src = '/img/user_icon.png';
         userImage.alt = user.id;
 
         const usernameSpan = document.createElement('span');
@@ -201,12 +225,12 @@ const ChatComponent = () => {
     }
 
     function onRoleChange() {
-        findAndDisplayConnectedUsers(roleSelectRef.current.value).then();
+        findAndDisplayConnectedUsers().then();
     }
 
     async function markMessagesAsRead(recipientId) {
         try {
-            const response = await fetch(`/mark-messages-as-read/${recipientId}`, {
+            const response = await fetch(`http://localhost:8083/mark-messages-as-read/${recipientId}`, {
                 method: 'POST'
             });
             if (response.ok) {
@@ -229,7 +253,7 @@ const ChatComponent = () => {
         clickedUser.classList.add('active');
 
         setSelectedUserId(clickedUser.getAttribute('id'));
-        await fetchAndDisplayUserChat();
+
         await markMessagesAsRead(userId);
 
         const nbrMsg = clickedUser.querySelector('.nbr-msg');
@@ -263,7 +287,7 @@ const ChatComponent = () => {
     }
 
     async function fetchAndDisplayUserChat() {
-        const userChatResponse = await fetch(`/messages/${userId}/${selectedUserId}`);
+        const userChatResponse = await fetch(`http://localhost:8083/messages/${userId}/${selectedUserId}`);
         if (userChatResponse.status === 200) {
             const userChat = await userChatResponse.json();
             chatAreaRef.current.innerHTML = '';
@@ -289,7 +313,7 @@ const ChatComponent = () => {
         if (messageContent && stompClient) {
             const chatMessage = {
                 senderId: userId,
-                recipientId: selectedUserId,
+                recipientId: selectedUserIdRef.current,
                 content: messageContent,
                 timestamp: new Date()
             };
@@ -298,6 +322,7 @@ const ChatComponent = () => {
                 body: JSON.stringify(chatMessage)
             });
             console.log('Message sent:', chatMessage);
+            displayMessage(userId, messageContent);
             messageInputRef.current.value = '';
         }
 
@@ -309,7 +334,8 @@ const ChatComponent = () => {
         console.log('PAYLOAD', payload);
         const message = JSON.parse(payload.body);
 
-        if (selectedUserId && selectedUserId === message.senderId) {
+        console.log("selectedUserId: ", selectedUserId);
+        if (selectedUserIdRef.current && selectedUserIdRef.current === message.senderId) {
             displayMessage(message.senderId, message.content);
             console.log('Message received and displayed.');
             chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
@@ -325,19 +351,19 @@ const ChatComponent = () => {
             }
         }
 
-        if (selectedUserId) {
-            document.querySelector(`#${selectedUserId}`).classList.add('active');
-            console.log('Active user item:', selectedUserId);
-        } else {
-            messageFormRef.current.classList.add('hidden');
-            console.log('Hidden message form');
-        }
+        // if (selectedUserId) {
+        //     document.querySelector(`#${selectedUserId}`).classList.add('active');
+        //     console.log('Active user item:', selectedUserId);
+        // } else {
+        //     messageFormRef.current.classList.add('hidden');
+        //     console.log('Hidden message form');
+        // }
     }
 
     function onLogout() {
         if (stompClient) {
             stompClient.publish({
-                destination: "/app/user.disconnectUser",
+                destination: "http://localhost:8083/app/user.disconnectUser",
                 body: JSON.stringify({ id: userId, status: 'OFFLINE' })
             });
             stompClient.deactivate();
@@ -351,13 +377,13 @@ const ChatComponent = () => {
             try {
                 const formData = new FormData();
                 formData.append('senderId', userId);
-                formData.append('recipientId', selectedUserId);
+                formData.append('recipientId', selectedUserIdRef.current);
                 formData.append('message', messageInputRef.current.value);
 
                 const resizedImageFile = await resizeImage(imageFile);
                 formData.append('file', resizedImageFile);
 
-                const response = await fetch('/chat/upload', {
+                const response = await fetch('http://localhost:8083/chat/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -433,11 +459,13 @@ const ChatComponent = () => {
                     <div className="users-list-container">
                         <h2>Online Users</h2>
                         <label htmlFor="role-select"></label>
-                        <select className="role-select-list hidden" ref={roleSelectRef} id="role-select">
-                            <option value="CUSTOMER">User</option>
-                            <option value="STAFF">Staff</option>
-                            <option value="MANAGER">Manager</option>
-                        </select>
+                        <div className="role-select-list hidden" ref={roleSelectListRef}>
+                            <select id="role-select" ref={roleSelectRef}>
+                                <option value="CUSTOMER">Customer</option>
+                                <option value="STAFF">Staff</option>
+                                <option value="MANAGER">Manager</option>
+                            </select>
+                        </div>
                         <ul id="connectedUsers"></ul>
                     </div>
                     <div>
