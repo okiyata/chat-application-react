@@ -26,6 +26,7 @@ public class ChatApplication {
 				registry.addMapping("/**")
 						.allowedOrigins("http://localhost:3000")
 						.allowedMethods("HEAD","GET","POST","PUT","DELETE","PATCH","OPTIONS")
+						.allowedHeaders("Content-Type")
 						.allowCredentials(true);
 			}
 		};

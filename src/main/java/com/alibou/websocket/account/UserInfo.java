@@ -32,7 +32,7 @@ public class UserInfo {
     private Gender gender;
 
     @Column(name = "phone_number", length = 10)
-    private long phoneNumber;
+    private String phoneNumber;
 
     private String address;
 

@@ -27,32 +27,6 @@ public class UserService {
         this.accountRepository = accountRepository;
     }
 
-    public void syncUsersToFirestore() {
-        Firestore db = FirestoreClient.getFirestore();
-        CollectionReference usersCollection = db.collection(USER_COLLECTION_NAME);
-        List<Account> accounts = accountRepository.findAll(); // Lấy tất cả các tài khoản từ SQL
-
-        for (Account account : accounts) {
-            // Tạo document với ID là ID của tài khoản từ SQL
-            DocumentReference docRef = usersCollection.document(account.getId());
-
-            // Chuẩn bị dữ liệu cho Firestore document
-            Map<String, Object> userData = new HashMap<>();
-            userData.put("id", account.getId());
-            userData.put("name", account.getUserInfo().getFirstName());
-            userData.put("role", account.getRole().toString());
-            userData.put("saleStaff", account.getSaleStaff());
-
-            ApiFuture<WriteResult> result = docRef.set(userData);
-            try {
-                result.get();
-                log.info("Syncing user {} to Firestore {}", account.getId(), docRef.getId());
-            } catch (InterruptedException | ExecutionException e) {
-                System.err.println("Error writing document: " + e);
-            }
-        }
-    }
-
     public void disconnect(User user) {
         Firestore db = FirestoreClient.getFirestore();
         DocumentReference docRef = db.collection(USER_COLLECTION_NAME).document(user.getId());
@@ -120,9 +94,9 @@ public class UserService {
         }
     }
 
-    @Scheduled(fixedRate = 60000) // Đồng bộ hóa mỗi 1 phút
-    public void syncData() {
-        syncUsersToFirestore();
-    }
+//    @Scheduled(fixedRate = 60000) // Đồng bộ hóa mỗi 1 phút
+//    public void syncData() {
+//        syncUsersToFirestore();
+//    }
 
 }

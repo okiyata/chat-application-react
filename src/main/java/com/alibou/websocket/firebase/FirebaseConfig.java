@@ -16,11 +16,11 @@ public class FirebaseConfig {
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
         FileInputStream serviceAccount =
-                new FileInputStream("E:\\Hoc\\Ky 5\\SWP391\\firebase\\chat-d8802-firebase-adminsdk-v44xe-3e2f56978a.json");
+                new FileInputStream("E:\\Hoc\\Ky 5\\SWP391\\firebase\\serviceKey.json");
 
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .setStorageBucket("chat-d8802.appspot.com")
+                .setStorageBucket("chat-v2-68daf.appspot.com")
                 .build();
 
         return FirebaseApp.initializeApp(options);
